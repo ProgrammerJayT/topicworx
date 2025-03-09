@@ -28,6 +28,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@tanstack/eslint-plugin-query": "^5.67.2",
     "eslint": "^9",
     "eslint-config-next": "15.2.1",
     "tailwindcss": "^4"
