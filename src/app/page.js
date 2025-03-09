@@ -1,101 +1,184 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useMemo, useState } from "react";
+import { Box, Button, Divider, Paper, Stack, Typography } from "@mui/material";
+import Grid from "@mui/material/Grid2";
+import dayjs from "dayjs";
+import { getStyles } from "./styles";
+import StatsFilterComponent from "../components/filters/statistics";
+import TableComponent from "../components/table";
+import { readStatistics } from "@/utils/api/statistics";
+import StatisticsLineChartComponent from "@/components/charts/statistics/line";
+import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { useAppContext } from "@/context/app";
+
+const HomePage = () => {
+  const { setLoader } = useAppContext();
+  const styles = getStyles();
+  const [data, setData] = useState([]);
+  const [visualizer, setVisualizer] = useState("graph");
+  const [filters, setFilters] = useState({ startDate: null, endDate: null });
+
+  const pathname = usePathname();
+
+  const statistics = useQuery({
+    queryKey: ["statistics"],
+    queryFn: readStatistics,
+    enabled: !!pathname,
+  });
+
+  useEffect(() => {
+    if (statistics.isLoading) {
+      console.log("Loading statistics...");
+    }
+    if (statistics.error) {
+      console.error("Error loading statistics:", statistics.error);
+    }
+    if (statistics.data) {
+      setData(statistics.data);
+    }
+  }, [statistics]);
+
+  useEffect(() => {
+    if (statistics.isLoading) {
+      setLoader((prev) => ({ ...prev, visibility: true }));
+    } else {
+      setLoader((prev) => ({ ...prev, visibility: false }));
+    }
+
+    if (statistics.error) {
+      console.error("Error loading statistics:", statistics.error);
+    }
+
+    if (statistics.data) {
+      setData(statistics.data);
+    }
+  }, [statistics.isLoading, statistics.error, statistics.data, setLoader]);
+
+  // ** Filter data based on selected date range **
+  const filteredData = useMemo(() => {
+    if (!filters.startDate && !filters.endDate) return data;
+
+    return data.filter((item) => {
+      const itemDate = dayjs(item.Date, "YYYY/MM/DD");
+      const startDate = filters.startDate
+        ? dayjs(filters.startDate, "YYYY/MM/DD")
+        : null;
+      const endDate = filters.endDate
+        ? dayjs(filters.endDate, "YYYY/MM/DD")
+        : null;
+
+      return (
+        (!startDate ||
+          itemDate.isAfter(startDate) ||
+          itemDate.isSame(startDate)) &&
+        (!endDate || itemDate.isBefore(endDate) || itemDate.isSame(endDate))
+      );
+    });
+  }, [data, filters]);
+
+  if (statistics.error) {
+    return <div>Error loading statistics</div>;
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <Box sx={styles.container}>
+      <Box sx={styles.content}>
+        <Typography variant="h2" sx={styles.topHeader}>
+          Covid-19 Statistics
+        </Typography>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        <Grid container spacing={2} sx={{ width: "100%", height: "100%" }}>
+          {/* Filter Section */}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Grid container spacing={5}>
+              <Grid size={12}>
+                <Stack sx={{ mx: 1 }} spacing={2}>
+                  <Typography variant="h5" sx={{ color: "gray" }}>
+                    Filters
+                  </Typography>
+                  <Divider />
+
+                  {/* Pass setFilters to the filter component */}
+                  <StatsFilterComponent setFilters={setFilters} />
+                </Stack>
+              </Grid>
+
+              <Grid size={12}>
+                <Stack sx={{ mx: 1 }} spacing={2}>
+                  <Typography variant="h5" sx={{ color: "gray" }}>
+                    Visualizer
+                  </Typography>
+                  <Divider />
+                </Stack>
+                <Paper sx={styles.visualizerButtonsContainer} elevation={20}>
+                  <Stack direction={"row"}>
+                    <Button
+                      onClick={() => {
+                        if (visualizer !== "graph") setVisualizer("graph");
+                      }}
+                      sx={[
+                        styles.graphButton,
+                        {
+                          color: visualizer === "graph" ? "white" : "green",
+                          bgcolor: visualizer === "graph" ? "green" : "white",
+                        },
+                      ]}
+                      size="large"
+                    >
+                      Graph
+                    </Button>
+
+                    <Button
+                      onClick={() => {
+                        if (visualizer !== "table") setVisualizer("table");
+                      }}
+                      sx={[
+                        styles.tableButton,
+                        {
+                          color: visualizer === "table" ? "white" : "green",
+                          bgcolor: visualizer === "table" ? "green" : "white",
+                        },
+                      ]}
+                      size="large"
+                    >
+                      Table
+                    </Button>
+                  </Stack>
+                </Paper>
+              </Grid>
+            </Grid>
+          </Grid>
+
+          {/* Chart Section */}
+          <Grid size={{ xs: 12, md: 8 }}>
+            <Box
+              sx={{
+                width: "100%",
+                height: "100%",
+                px: 5,
+              }}
+            >
+              {filteredData.length > 0 ? (
+                visualizer === "graph" ? (
+                  <StatisticsLineChartComponent data={filteredData} />
+                ) : (
+                  <TableComponent data={filteredData} />
+                )
+              ) : (
+                <Box sx={styles.noDataContainer}>
+                  <Typography variant="h4">
+                    No data available for the selected date range.
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>
+    </Box>
   );
-}
+};
+
+export default HomePage;
